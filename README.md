@@ -2,16 +2,6 @@
 
 A dark-mode ledger for managing each person's regular monthly dues, scheduled EMI plans, repayments, and net balance. Records are stored in Firebase Firestore and require Google sign-in.
 
-## Run locally
-
-Open `index.html` from a local web server (ES modules are not supported by every browser when opened as a `file://` URL). For example, with Python installed:
-
-```powershell
-python -m http.server 8000
-```
-
-Then visit `http://localhost:8000`.
-
 ## Enable Firestore sync
 
 1. Create a Firebase project and register a web app.
