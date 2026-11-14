@@ -2,6 +2,9 @@
 
 A dark-mode ledger for managing each person's regular monthly dues, scheduled EMI plans, repayments, and net balance. Records are stored in Firebase Firestore and require Google sign-in.
 
+## Live Preview
+https://codewithrajib.github.io/MyDues/
+
 ## Enable Firestore sync
 
 1. Create a Firebase project and register a web app.
