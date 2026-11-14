@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isGoogleOwner(userId) {
+      return request.auth != null
+        && request.auth.token.firebase.identities['google.com'] != null
+        && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/people/{personId} {
+      allow read, write: if isGoogleOwner(userId);
+    }
+
+    match /users/{userId}/payments/{paymentId} {
+      allow read, write: if isGoogleOwner(userId);
+    }
+
+    match /users/{userId}/dues/{legacyOrPersonId} {
+      allow read, write: if isGoogleOwner(userId);
+    }
+
+    match /users/{userId}/emis/{legacyOrPersonId} {
+      allow read, write: if isGoogleOwner(userId);
+    }
+
+    match /users/{userId}/dues/{personId}/records/{dueId} {
+      allow read, write: if isGoogleOwner(userId);
+    }
+
+    match /users/{userId}/emis/{personId}/plans/{planId} {
+      allow read, write: if isGoogleOwner(userId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
