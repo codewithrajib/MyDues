@@ -5,25 +5,6 @@ A dark-mode ledger for managing each person's regular monthly dues, scheduled EM
 ## Live Preview
 https://codewithrajib.github.io/MyDues/
 
-## Enable Firestore sync
-
-1. Create a Firebase project and register a web app.
-2. Enable **Firestore Database** and **Authentication → Sign-in method → Google** in the Firebase console.
-3. Copy the web app settings into `firebase-config.js`, replacing every `YOUR_...` placeholder.
-4. Publish the rules in `firestore.rules` to your Firestore database.
-
-Google sign-in is required before entering the app. A non-dismissible sign-in screen offers a Google button; the sign-in popup opens when the user clicks it. Firestore rules require Google authentication and restrict each Firebase user ID to its own records. People are stored at `users/{userId}/people/{personName}`; repayments remain under `users/{userId}/payments`. Regular dues and EMI plans are grouped under the person's readable ID, at `users/{userId}/dues/{personName}/records/{dueId}` and `users/{userId}/emis/{personName}/plans/{planId}`. The final document IDs allow multiple due entries and plans per person. Existing top-level dues and EMI records are moved to these paths when the account collections are loaded. Existing anonymous sessions are linked to Google on first sign-in where possible, preserving the Firebase user ID.
-
-## Install and use offline
-
-Serve MyDues over HTTPS (or localhost during development). The install icon beside the account button stays visible; on supported browsers it opens the native install prompt. If the prompt is unavailable or MyDues is already installed, the icon explains the available next step. Chrome on Android also offers **Install app** or **Add to Home screen** from its menu. The `manifest.json` file provides the standalone display and app icons; the service worker caches the app shell and Firebase modules.
-
-After signing in online at least once, Firestore's persistent IndexedDB cache keeps records available offline and queues writes made without a connection. Changes appear immediately on the device and sync automatically when the connection returns; Firestore clears acknowledged pending writes. The local document cache remains available for later offline use. The browser must already have a valid signed-in Google session to use the app offline; first-time sign-in requires internet access.
-
-Person documents are stored at `users/{userId}/people/{personName}`. The person name is the readable document ID (slashes are replaced with hyphens); repeated names receive a numbered suffix. Existing random-ID person documents are moved to name-based IDs when all account collections have been read from Firestore, and their dues, EMI plans, and repayment references are updated as part of the migration.
-
-The Firebase web API key identifies the project; the Firestore security rules and authentication protect its data. Do not loosen the rules to public read/write access.
-
 ## Features
 
 - Keeps a separate account for each person.
