@@ -92,6 +92,19 @@ function regularDueMonth(due) {
   return due.monthKey || monthOf(due.purchaseDate || due.dueDate);
 }
 
+function regularPurchaseMonth(due) {
+  return monthOf(due.purchaseDate || due.dueDate) || due.monthKey || '';
+}
+
+function regularVisibleThrough(due) {
+  if (due.purchaseDate && due.dueDate) return due.dueDate;
+  const monthKey = regularDueMonth(due);
+  if (!monthKey) return '';
+  const [year, month] = monthKey.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${monthKey}-${String(lastDay).padStart(2, '0')}`;
+}
+
 function monthLabel(monthKey) {
   const [year, month] = monthKey.split('-').map(Number);
   return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
@@ -184,7 +197,14 @@ function emiFor(plan, monthKey = state.month) {
 }
 
 function chargesFor(personId, monthKey = state.month) {
-  const regular = state.dues.filter((due) => due.personId === personId && regularDueMonth(due) === monthKey)
+  const regular = state.dues.filter((due) => {
+    if (due.personId !== personId) return false;
+    const purchaseMonth = regularPurchaseMonth(due);
+    const dueMonth = regularDueMonth(due);
+    const visibleThrough = regularVisibleThrough(due);
+    const belongsToMonth = purchaseMonth === monthKey || dueMonth === monthKey;
+    return belongsToMonth && (!visibleThrough || state.statementDate <= visibleThrough);
+  })
     .map((due) => ({
       id: due.id,
       personId,
@@ -198,7 +218,7 @@ function chargesFor(personId, monthKey = state.month) {
       dueDate: due.purchaseDate && due.dueDate ? due.dueDate : ''
     }));
   const emiCharges = state.emis.filter((plan) => plan.personId === personId)
-    .map((plan) => emiFor(plan, monthKey)).filter(Boolean);
+    .map((plan) => emiFor(plan, monthKey)).filter((charge) => charge && charge.date >= state.statementDate);
   const charges = [...regular, ...emiCharges].map((charge) => charge.type === 'emi'
     ? { ...charge, purchaseDate: '', dueDate: charge.date }
     : charge);
@@ -230,7 +250,14 @@ function priorChargesTotal(personId, monthKey) {
 function accountFor(personId, monthKey = state.month) {
   const currentCharges = chargesFor(personId, monthKey);
   const currentPayments = state.payments.filter((payment) => payment.personId === personId && payment.monthKey === monthKey);
-  const billed = currentCharges.reduce((sum, charge) => sum + charge.amount, 0);
+  const regularBilled = state.dues
+    .filter((due) => due.personId === personId && regularDueMonth(due) === monthKey)
+    .reduce((sum, due) => sum + Number(due.amount || 0), 0);
+  const emiBilled = state.emis.filter((plan) => plan.personId === personId)
+    .map((plan) => emiFor(plan, monthKey))
+    .filter(Boolean)
+    .reduce((sum, charge) => sum + charge.amount, 0);
+  const billed = regularBilled + emiBilled;
   const paid = currentPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const opening = priorChargesTotal(personId, monthKey)
     - state.payments.filter((payment) => payment.personId === personId && payment.monthKey < monthKey)
