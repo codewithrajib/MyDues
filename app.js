@@ -739,6 +739,8 @@ function showForm(formId, personId = '', record = null) {
   if (formId === 'emiForm') {
     fillPersonSelect($('#emiPerson'), selectedPerson);
     const today = new Date();
+    $('#emiForm').elements.purchaseDate.value = record?.purchaseDate || (record ? '' : dateString(today));
+    $('#emiForm').elements.purchaseDate.required = !record || Boolean(record.purchaseDate);
     $('#emiForm').elements.firstDue.value = dateString(new Date(today.getFullYear(), today.getMonth() + 1, 5));
     if (record) {
       $('#emiForm').elements.provider.value = record.provider || '';
@@ -831,13 +833,15 @@ function addEmi(data, recordId = '') {
   const processingFee = Number(data.processingFee);
   const tenure = Number(data.tenure);
   const alreadyPaid = Number(data.alreadyPaid) || 0;
+  const existing = recordId ? state.emis.find((entry) => entry.id === recordId) : null;
+  const purchaseDate = data.purchaseDate || existing?.purchaseDate || '';
+  if (recordId && !existing) throw new Error('This EMI plan is no longer available.');
   if (!data.personId || !data.provider.trim() || principal <= 0 || !Number.isFinite(rate) || rate < 0
     || !Number.isFinite(processingFee) || processingFee < 0 || !Number.isInteger(tenure) || tenure <= 0
-    || !Number.isInteger(alreadyPaid) || alreadyPaid < 0 || alreadyPaid > tenure || !data.firstDue) {
-    throw new Error('Enter valid EMI details and ensure the already-given count is between zero and the total term.');
+    || !Number.isInteger(alreadyPaid) || alreadyPaid < 0 || alreadyPaid > tenure
+    || (!existing && !safeDate(purchaseDate)) || (purchaseDate && !safeDate(purchaseDate)) || !safeDate(data.firstDue)) {
+    throw new Error('Enter valid EMI details, including the purchase and first due dates, and ensure the already-given count is between zero and the total term.');
   }
-  const existing = recordId ? state.emis.find((entry) => entry.id === recordId) : null;
-  if (recordId && !existing) throw new Error('This EMI plan is no longer available.');
   const emi = {
     id: existing?.id || crypto.randomUUID(),
     personId: data.personId,
@@ -850,6 +854,7 @@ function addEmi(data, recordId = '') {
     firstDue: data.firstDue,
     createdAt: existing?.createdAt || new Date().toISOString()
   };
+  if (purchaseDate) emi.purchaseDate = purchaseDate;
   emi.emi = calculateEmi(emi.principal, emi.rate, emi.tenure);
   return persistRecord('emis', emi, Boolean(existing), existing);
 }
