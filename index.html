@@ -157,6 +157,7 @@
         <div class="field-row"><label class="field-label">Purchase amount<input name="principal" type="number" min="1" step="0.01" placeholder="36000" required></label><label class="field-label">Annual interest<input name="rate" type="number" min="0" max="100" step="0.01" value="0" required><span class="field-suffix">% p.a.</span></label></div>
         <label class="field-label">Processing fee<input name="processingFee" type="number" min="0" step="0.01" value="0" required><span class="field-suffix">₹ · first EMI only</span></label>
         <div class="field-row"><label class="field-label">Total term<input name="tenure" type="number" min="1" max="600" step="1" placeholder="12" required><span class="field-suffix">total months</span></label><label class="field-label">EMIs already given <span class="optional">(optional)</span><input name="alreadyPaid" type="number" min="0" max="600" step="1" value="0" placeholder="0"><span class="field-suffix">Previously paid instalments</span></label></div>
+        <label class="field-label">Purchase date<input name="purchaseDate" type="date" required></label>
         <label class="field-label">EMI start date<input name="firstDue" type="date" required></label>
         <div class="emi-preview"><span id="emiPreviewLabel">Next scheduled EMI</span><strong id="emiPreview">₹0</strong></div>
         <div class="dialog-error" id="emiError" role="alert"></div><button class="button button-primary dialog-submit" type="submit">Save EMI plan <span>→</span></button>
