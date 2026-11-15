@@ -57,7 +57,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .topbar-actions { display: flex; align-items: center; gap: 11px; }
 .month-picker { display: flex; height: 36px; align-items: center; gap: 8px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; background: #171e1a; }
 .month-picker svg { width: 15px; height: 15px; fill: none; stroke: #9aaa9f; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.month-picker input { width: 111px; border: 0; color: #d5dfd7; outline: 0; color-scheme: dark; background: transparent; font-size: 11px; }
+.month-picker input { width: 126px; border: 0; color: #d5dfd7; outline: 0; color-scheme: dark; background: transparent; font-size: 11px; }
 .button { display: inline-flex; height: 37px; align-items: center; justify-content: center; gap: 8px; padding: 0 13px; border: 1px solid transparent; border-radius: 7px; font-size: 11px; font-weight: 600; transition: .15s ease; white-space: nowrap; }
 .button-primary { color: #0a1a10; background: var(--green); box-shadow: 0 2px 6px #0003; }
 .button-primary:hover { background: #7ce0a4; }
@@ -293,7 +293,7 @@ th:first-child, td:first-child { padding-left: 18px; }
   .main-content { margin-left: 0; }
   .topbar { height: 61px; justify-content: space-between; padding: 0 16px; }
   .month-picker { gap: 4px; padding: 0 6px; }
-  .month-picker input { width: 90px; font-size: 10px; }
+  .month-picker input { width: 112px; font-size: 10px; }
   .topbar-actions { gap: 7px; }
   .account-trigger { max-width: 135px; }
   .account-identity strong, .account-identity small { max-width: 80px; }
@@ -328,9 +328,9 @@ th:first-child, td:first-child { padding-left: 18px; }
 }
 @media (max-width: 420px) {
   .month-picker { gap: 4px; padding: 0 6px; }
-  .month-picker input { width: 98px; font-size: 10px; }
+  .month-picker input { width: 112px; font-size: 10px; }
   .topbar-actions { gap: 6px; }
-  .month-picker input { width: 72px; }
+  .month-picker input { width: 94px; }
   .account-trigger { max-width: 112px; padding-right: 5px; padding-left: 5px; }
   .account-avatar { width: 24px; height: 24px; flex-basis: 24px; }
   .account-identity strong, .account-identity small { max-width: 54px; }
@@ -388,7 +388,7 @@ th:first-child, td:first-child { padding-left: 18px; }
   #statementPrint table { width: 100%; border-collapse: collapse; }
   #statementPrint th, #statementPrint td { padding: 9px 8px; border-bottom: 1px solid #e8ede9; color: #344139; font-size: 8px; text-align: left; }
   #statementPrint th { color: #738078; background: #f3f6f3; font-size: 7px; font-weight: 700; letter-spacing: .55px; }
-  #statementPrint td:nth-child(4), #statementPrint th:nth-child(4) { text-align: right; }
+  #statementPrint td:nth-child(5), #statementPrint th:nth-child(5) { text-align: right; }
   #statementPrint .statement-charge-regular td:first-child { color: #26764f; font-weight: 700; }
   #statementPrint .statement-charge-emi td:first-child { color: #387da4; font-weight: 700; }
   #statementPrint tfoot th { color: #26372c; background: #edf5ef; font-size: 8px; }
