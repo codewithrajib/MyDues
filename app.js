@@ -192,6 +192,7 @@ function emiFor(plan, monthKey = state.month) {
     detail: `Instalment ${alreadyPaid + index + 1} of ${tenure}${processingFee ? ` · includes ${money(processingFee)} processing fee` : ''}`,
     amount,
     monthKey,
+    purchaseDate: plan.purchaseDate || '',
     date: dateString(new Date(year, month - 1, day, 12))
   };
 }
@@ -220,7 +221,7 @@ function chargesFor(personId, monthKey = state.month) {
   const emiCharges = state.emis.filter((plan) => plan.personId === personId)
     .map((plan) => emiFor(plan, monthKey)).filter((charge) => charge && charge.date >= state.statementDate);
   const charges = [...regular, ...emiCharges].map((charge) => charge.type === 'emi'
-    ? { ...charge, purchaseDate: '', dueDate: charge.date }
+    ? { ...charge, dueDate: charge.date }
     : charge);
   return charges.sort((a, b) => (a.dueDate || a.purchaseDate).localeCompare(b.dueDate || b.purchaseDate) || a.label.localeCompare(b.label));
 }
