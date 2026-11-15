@@ -49,6 +49,7 @@ const state = {
   payments: [],
   user: null,
   month: currentMonth(),
+  statementDate: dateString(new Date()),
   activeView: 'overview',
   personId: ''
 };
@@ -76,6 +77,19 @@ function dateString(date) {
 
 function monthOf(dateValue) {
   return dateValue ? dateValue.slice(0, 7) : '';
+}
+
+function addCalendarMonths(dateValue, count) {
+  const date = safeDate(dateValue);
+  if (!date) return '';
+  const targetMonth = new Date(date.getFullYear(), date.getMonth() + count, 1, 12);
+  const day = Math.min(date.getDate(), new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate());
+  return dateString(new Date(targetMonth.getFullYear(), targetMonth.getMonth(), day, 12));
+}
+
+function regularDueMonth(due) {
+  if (due.purchaseDate && due.dueDate) return monthOf(due.dueDate);
+  return due.monthKey || monthOf(due.purchaseDate || due.dueDate);
 }
 
 function monthLabel(monthKey) {
@@ -170,7 +184,7 @@ function emiFor(plan, monthKey = state.month) {
 }
 
 function chargesFor(personId, monthKey = state.month) {
-  const regular = state.dues.filter((due) => due.personId === personId && due.monthKey === monthKey)
+  const regular = state.dues.filter((due) => due.personId === personId && regularDueMonth(due) === monthKey)
     .map((due) => ({
       id: due.id,
       personId,
@@ -179,17 +193,21 @@ function chargesFor(personId, monthKey = state.month) {
       label: due.description || due.category || 'Regular due',
       detail: 'Purchased',
       amount: Number(due.amount) || 0,
-      monthKey: due.monthKey,
-      date: due.purchaseDate || due.dueDate
+      monthKey: regularDueMonth(due),
+      purchaseDate: due.purchaseDate || due.dueDate || '',
+      dueDate: due.purchaseDate && due.dueDate ? due.dueDate : ''
     }));
   const emiCharges = state.emis.filter((plan) => plan.personId === personId)
     .map((plan) => emiFor(plan, monthKey)).filter(Boolean);
-  return [...regular, ...emiCharges].sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label));
+  const charges = [...regular, ...emiCharges].map((charge) => charge.type === 'emi'
+    ? { ...charge, purchaseDate: '', dueDate: charge.date }
+    : charge);
+  return charges.sort((a, b) => (a.dueDate || a.purchaseDate).localeCompare(b.dueDate || b.purchaseDate) || a.label.localeCompare(b.label));
 }
 
 function priorChargesTotal(personId, monthKey) {
   const regularTotal = state.dues
-    .filter((due) => due.personId === personId && due.monthKey < monthKey)
+    .filter((due) => due.personId === personId && regularDueMonth(due) < monthKey)
     .reduce((sum, due) => sum + Number(due.amount || 0), 0);
   const emiTotal = state.emis.filter((plan) => plan.personId === personId).reduce((sum, plan) => {
     const firstMonth = monthOf(plan.firstDue);
@@ -529,7 +547,7 @@ function renderOverview() {
   }
   const activeEmis = state.emis.filter((plan) => emiFor(plan, state.month)).length;
   $('#billedTotal').textContent = money(billed);
-  $('#billedNote').textContent = `${state.dues.filter((due) => due.monthKey === state.month).length} regular dues + EMI instalments`;
+  $('#billedNote').textContent = `${state.dues.filter((due) => regularDueMonth(due) === state.month).length} regular dues + EMI instalments`;
   $('#collectedTotal').textContent = money(collected);
   $('#collectionNote').textContent = `Received from ${new Set(state.payments.filter((payment) => payment.monthKey === state.month).map((payment) => payment.personId)).size} people`;
   $('#collectionProgress').style.width = `${billed ? Math.min(100, collected / billed * 100) : 0}%`;
@@ -586,14 +604,15 @@ function renderPerson() {
   tbody.replaceChildren();
   for (const charge of account.currentCharges) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><span class="type-label ${charge.type === 'emi' ? 'type-emi' : ''}"></span></td><td class="charge-label"></td><td class="due-date"></td><td class="amount-cell"></td><td class="charge-detail"></td><td class="table-actions"></td>`;
+    tr.innerHTML = `<td><span class="type-label ${charge.type === 'emi' ? 'type-emi' : ''}"></span></td><td class="charge-label"></td><td></td><td></td><td class="amount-cell"></td><td class="charge-detail"></td><td class="table-actions"></td>`;
     tr.querySelector('.type-label').textContent = charge.type === 'emi' ? 'EMI' : charge.category;
     tr.querySelector('.charge-label').textContent = charge.label;
-    tr.children[2].textContent = formatDate(charge.date);
-    tr.children[3].textContent = money(charge.amount);
+    tr.children[2].textContent = formatDate(charge.purchaseDate);
+    tr.children[3].textContent = formatDate(charge.dueDate);
+    tr.children[4].textContent = money(charge.amount);
     tr.querySelector('.charge-detail').textContent = charge.detail;
     if (charge.type === 'regular') {
-      tr.children[5].append(recordActionButtons(charge.id, 'edit-due', 'delete-due'));
+      tr.children[6].append(recordActionButtons(charge.id, 'edit-due', 'delete-due'));
     }
     tbody.append(tr);
   }
@@ -653,7 +672,7 @@ function renderRepayments() {
 }
 
 function render() {
-  $('#monthPicker').value = state.month;
+  $('#statementDatePicker').value = state.statementDate;
   renderOverview();
   renderPeople();
   renderPerson();
@@ -669,14 +688,19 @@ function showForm(formId, personId = '', record = null) {
   const selectedPerson = record?.personId || personId || state.personId || state.people[0]?.id || '';
   if (formId === 'dueForm') {
     fillPersonSelect($('#duePerson'), selectedPerson);
-    $('#dueForm').elements.purchaseDate.value = record?.purchaseDate || record?.dueDate || dateString(new Date());
+    const purchaseDate = record?.purchaseDate || record?.dueDate || dateString(new Date());
+    $('#dueForm').elements.purchaseDate.value = purchaseDate;
+    $('#dueForm').elements.dueDate.value = record?.purchaseDate
+      ? record.dueDate || addCalendarMonths(purchaseDate, 1)
+      : addCalendarMonths(purchaseDate, 1);
+    $('#dueForm').dataset.suggestedDueDate = $('#dueForm').elements.dueDate.value;
     $('#dueForm').elements.category.value = record?.category || 'Grocery';
     $('#dueForm').elements.amount.value = record?.amount ?? '';
     $('#dueForm').elements.description.value = record?.description || '';
     $('#dueForm h2').textContent = record ? 'Edit a regular due' : 'Add a regular due';
     $('#dueForm .dialog-description').textContent = record
-      ? 'Update this regular charge and its purchase date.'
-      : "Add a month's grocery, electricity, internet or other expense.";
+      ? 'Update when this regular charge was purchased and when it is due.'
+      : 'Record the purchase date and the date this charge is due.';
     $('#dueForm .dialog-kicker').textContent = record ? 'UPDATE ACCOUNT' : 'MONTHLY ACCOUNT';
     $('#dueForm .dialog-submit').innerHTML = record ? 'Save changes <span>→</span>' : 'Add to account <span>→</span>';
   }
@@ -750,7 +774,9 @@ async function addPerson(data) {
 
 function addRegularDue(data, recordId = '') {
   const amount = Number(data.amount);
-  if (!data.personId || !amount || amount <= 0 || !data.purchaseDate) throw new Error('Choose a person and enter a valid amount and purchase date.');
+  if (!data.personId || !amount || amount <= 0 || !safeDate(data.purchaseDate) || !safeDate(data.dueDate)) {
+    throw new Error('Choose a person and enter a valid amount, purchase date, and due date.');
+  }
   const existing = recordId ? state.dues.find((entry) => entry.id === recordId) : null;
   if (recordId && !existing) throw new Error('This regular due is no longer available.');
   const due = {
@@ -760,7 +786,8 @@ function addRegularDue(data, recordId = '') {
     description: data.description.trim() || data.category,
     amount,
     purchaseDate: data.purchaseDate,
-    monthKey: monthOf(data.purchaseDate),
+    dueDate: data.dueDate,
+    monthKey: monthOf(data.dueDate),
     createdAt: existing?.createdAt || new Date().toISOString()
   };
   return persistRecord('dues', due, Boolean(existing), existing);
@@ -918,12 +945,12 @@ function statementMarkup(title, subtitle, summary, rows, payments = [], person =
   chargesHeading.innerHTML = '<h2>Monthly account activity</h2><p>Purchases and EMI instalments for the statement month</p>';
   const table = document.createElement('table');
   table.className = 'statement-table';
-  table.innerHTML = '<thead><tr><th>TYPE</th><th>ITEM / PROVIDER</th><th>PURCHASE / EMI DATE</th><th>AMOUNT</th><th>DETAIL</th></tr></thead><tbody></tbody><tfoot><tr><th colspan="3">Total</th><th class="statement-total-amount"></th><th></th></tr></tfoot>';
+  table.innerHTML = '<thead><tr><th>TYPE</th><th>ITEM / PROVIDER</th><th>PURCHASE DATE</th><th>DUE DATE</th><th>AMOUNT</th><th>DETAIL</th></tr></thead><tbody></tbody><tfoot><tr><th colspan="4">Total</th><th class="statement-total-amount"></th><th></th></tr></tfoot>';
   const tbody = table.querySelector('tbody');
   for (const row of rows) {
     const tr = document.createElement('tr');
     tr.className = row.type === 'emi' ? 'statement-charge-emi' : 'statement-charge-regular';
-    for (const value of [row.type === 'emi' ? 'EMI' : row.category, row.label, formatDate(row.date), money(row.amount), row.detail]) {
+    for (const value of [row.type === 'emi' ? 'EMI' : row.category, row.label, formatDate(row.purchaseDate), formatDate(row.dueDate), money(row.amount), row.detail]) {
       const cell = document.createElement('td');
       cell.textContent = value;
       tr.append(cell);
@@ -933,7 +960,7 @@ function statementMarkup(title, subtitle, summary, rows, payments = [], person =
   if (!rows.length) {
     const emptyRow = document.createElement('tr');
     const emptyCell = document.createElement('td');
-    emptyCell.colSpan = 5;
+    emptyCell.colSpan = 6;
     emptyCell.textContent = 'No purchases or EMI instalments recorded for this month.';
     emptyRow.append(emptyCell);
     tbody.append(emptyRow);
@@ -1528,10 +1555,19 @@ function wireEvents() {
     if (action.dataset.action === 'person-statement') printStatement(personId);
   });
 
-  $('#monthPicker').addEventListener('change', (event) => {
+  $('#statementDatePicker').addEventListener('change', (event) => {
     if (event.target.value) {
-      state.month = event.target.value;
+      state.statementDate = event.target.value;
+      state.month = monthOf(event.target.value);
       render();
+    }
+  });
+  $('#regularPurchaseDate').addEventListener('change', (event) => {
+    const form = $('#dueForm');
+    const dueDate = form.elements.dueDate;
+    if (dueDate.value === form.dataset.suggestedDueDate) {
+      dueDate.value = addCalendarMonths(event.target.value, 1);
+      form.dataset.suggestedDueDate = dueDate.value;
     }
   });
   $('.dialog-close').addEventListener('click', () => $('#formDialog').close());
@@ -1572,7 +1608,7 @@ function wireEvents() {
 function start() {
   wireEvents();
   $('#startupGate').showModal();
-  $('#monthPicker').value = state.month;
+  $('#statementDatePicker').value = state.statementDate;
   renderAccountControl(null);
   render();
   if (firebaseConfigured) connectFirebase();
