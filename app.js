@@ -434,7 +434,9 @@ function emiPlanSummary(plan, monthKey = state.month) {
   const alreadyPaid = alreadyPaidInstallments(plan);
   const monthlyEmi = Number(plan.emi) || calculateEmi(plan.principal, plan.rate, tenure);
   const remainingTenure = tenure - alreadyPaid;
-  const elapsedRemainingIndex = Math.max(0, index);
+  const currentInstallment = index >= 0 ? emiFor(plan, monthKey) : null;
+  const dueInstallmentCount = currentInstallment && currentInstallment.date <= state.statementDate ? 1 : 0;
+  const elapsedRemainingIndex = Math.max(0, index) + dueInstallmentCount;
   const remainingCount = Math.max(0, remainingTenure - elapsedRemainingIndex);
   const processingFee = remainingCount && alreadyPaid === 0 && index <= 0
     ? Math.max(0, Number(plan.processingFee) || 0)
@@ -495,7 +497,7 @@ function emiPlanCard(plan, summary) {
     ? 'All scheduled instalments are complete'
     : summary.processingFee
       ? `Includes ${money(summary.processingFee)} processing fee in the first instalment`
-      : `Schedule from ${monthLabel(state.month)}; includes this month`;
+      : `Schedule after ${formatDate(state.statementDate)}; due instalments stay listed through their date`;
   card.append(recordActionButtons(plan.id, 'edit-emi', 'delete-emi'));
   return card;
 }
@@ -572,7 +574,10 @@ function renderOverview() {
     collected += account.paid;
     balance += Math.max(0, account.balance);
   }
-  const activeEmis = state.emis.filter((plan) => emiFor(plan, state.month)).length;
+  const activeEmis = state.emis.filter((plan) => {
+    const charge = emiFor(plan, state.month);
+    return charge && charge.date >= state.statementDate;
+  }).length;
   $('#billedTotal').textContent = money(billed);
   $('#billedNote').textContent = `${state.dues.filter((due) => regularDueMonth(due) === state.month).length} regular dues + EMI instalments`;
   $('#collectedTotal').textContent = money(collected);
